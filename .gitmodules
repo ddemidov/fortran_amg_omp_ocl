@@ -1,0 +1,6 @@
+[submodule "vexcl"]
+	path = vexcl
+	url = https://github.com/ddemidov/vexcl
+[submodule "amgcl"]
+	path = amgcl
+	url = https://github.com/ddemidov/amgcl
