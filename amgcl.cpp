@@ -31,6 +31,7 @@ THE SOFTWARE.
 #include <amgcl/backend/builtin.hpp>
 #include <amgcl/backend/vexcl.hpp>
 #include <amgcl/runtime.hpp>
+#include <amgcl/preconditioner/runtime.hpp>
 #include <amgcl/make_solver.hpp>
 #include <amgcl/adapter/crs_tuple.hpp>
 
@@ -95,14 +96,14 @@ typedef amgcl::backend::vexcl<double>   opencl;
 
 typedef
     amgcl::make_solver<
-        amgcl::runtime::amg<openmp>,
+        amgcl::runtime::preconditioner<openmp>,
         amgcl::runtime::iterative_solver<openmp>
         >
     openmp_solver;
 
 typedef
     amgcl::make_solver<
-        amgcl::runtime::amg<opencl>,
+        amgcl::runtime::preconditioner<opencl>,
         amgcl::runtime::iterative_solver<opencl>
         >
     opencl_solver;
