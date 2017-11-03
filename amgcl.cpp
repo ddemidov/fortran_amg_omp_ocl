@@ -27,6 +27,8 @@ THE SOFTWARE.
 
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/variant.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 #include <amgcl/backend/builtin.hpp>
 #include <amgcl/backend/vexcl.hpp>
@@ -63,6 +65,17 @@ void STDCALL amgcl_params_setf(amgclHandle prm, const char *name, float value) {
 //---------------------------------------------------------------------------
 void STDCALL amgcl_params_sets(amgclHandle prm, const char *name, const char *value) {
     static_cast<Params*>(prm)->put(name, value);
+}
+
+//---------------------------------------------------------------------------
+void STDCALL amgcl_params_read_json(amgclHandle prm, const char *fname) {
+    try {
+        read_json(fname, *static_cast<Params*>(prm));
+    } catch(const std::exception &e) {
+        std::cout
+            << "Failed to read \"" << fname << "\"" << std::endl
+            << "  Reason: " << e.what() << std::endl;
+    }
 }
 
 //---------------------------------------------------------------------------

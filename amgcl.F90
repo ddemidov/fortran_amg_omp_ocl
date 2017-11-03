@@ -24,7 +24,8 @@ module amgcl
     use iso_c_binding
     private
     public c_size_t, c_int, c_double, c_char, conv_info, &
-        amgcl_params_create, amgcl_params_seti, amgcl_params_setf, amgcl_params_sets, amgcl_params_destroy, &
+        amgcl_params_create, amgcl_params_destroy, &
+        amgcl_params_seti, amgcl_params_setf, amgcl_params_sets, amgcl_params_read_json, &
         amgcl_solver_create, amgcl_solver_solve, amgcl_solver_report, amgcl_solver_destroy
 
     type, bind(C) :: conv_info
@@ -62,6 +63,13 @@ module amgcl
             integer   (c_size_t), intent(in), value :: prm
             character (c_char),   intent(in)        :: name(*)
             character (c_char),   intent(in)        :: val(*)
+        end subroutine
+
+        ! Read parameters from a JSON file.
+        subroutine amgcl_params_read_json_c(prm, fname) bind (C, name="amgcl_params_read_json")
+            use iso_c_binding
+            integer   (c_size_t), intent(in), value :: prm
+            character (c_char),   intent(in)        :: fname(*)
         end subroutine
 
         ! Destroy parameter list.
@@ -144,6 +152,15 @@ module amgcl
         character (len=*),    intent(in)        :: val
 
         call amgcl_params_sets_c(prm, name // c_null_char, val // c_null_char)
+    end subroutine
+
+    ! Read parameters from a JSON file.
+    subroutine amgcl_params_read_json(prm, fname)
+        use iso_c_binding
+        integer   (c_size_t), intent(in), value :: prm
+        character (len=*),    intent(in)        :: fname
+
+        call amgcl_params_read_json_c(prm, fname // c_null_char)
     end subroutine
 
 end module

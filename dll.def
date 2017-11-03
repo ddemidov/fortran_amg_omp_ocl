@@ -1,9 +1,10 @@
-LIBRARY amgcl
+LIBRARY libamgcl
 EXPORTS
     amgcl_params_create
     amgcl_params_seti
     amgcl_params_setf
     amgcl_params_sets
+    amgcl_params_read_json
     amgcl_params_destroy
     amgcl_solver_create
     amgcl_solver_solve

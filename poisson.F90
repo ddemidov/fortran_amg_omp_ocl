@@ -66,8 +66,24 @@ program poisson
 
     ! Create solver parameters.
     params = amgcl_params_create()
-    call amgcl_params_sets(params, "solver.type", "cg")
+    call amgcl_params_sets(params, "solver.type", "bicgstab")
     call amgcl_params_setf(params, "solver.tol", 1e-6)
+    call amgcl_params_sets(params, "precond.relax.type", "ilu0")
+
+    ! Read parameters from a JSON file.
+    ! An example of JSON file with the above parameters:
+    ! {
+    !   "solver" : {
+    !     "type" : "cg",
+    !     "tol" : 1e-6
+    !   },
+    !   "precond" : {
+    !     "relax" : {
+    !       "type" : "ilu0"
+    !     }
+    !   }
+    ! }
+    call amgcl_params_read_json(params, "params.json");
 
     ! Create solver, printout its structure.
     solver = amgcl_solver_create(n2, ptr, col, val, DEVNUM, params)
