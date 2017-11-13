@@ -26,7 +26,8 @@ module amgcl
     public c_size_t, c_int, c_double, c_char, conv_info, &
         amgcl_params_create, amgcl_params_destroy, &
         amgcl_params_seti, amgcl_params_setf, amgcl_params_sets, amgcl_params_read_json, &
-        amgcl_solver_create, amgcl_solver_solve, amgcl_solver_report, amgcl_solver_destroy
+        amgcl_solver_create, amgcl_solver_solve, amgcl_solver_report, amgcl_solver_destroy, &
+        amgcl_schur_pc_create, amgcl_schur_pc_solve, amgcl_schur_pc_report, amgcl_schur_pc_destroy
 
     type, bind(C) :: conv_info
         integer (c_int)    :: iterations
@@ -117,6 +118,45 @@ module amgcl
 
         ! Destroy iterative solver.
         subroutine amgcl_solver_destroy(solver) bind(C, name="amgcl_solver_destroy")
+            use iso_c_binding
+            integer (c_size_t), intent(in), value :: solver
+        end subroutine
+
+        ! Create SchurPC solver
+        integer(c_size_t) &
+        function amgcl_schur_pc_create (n, ptr, col, val, pressure_vars, devnum, prm) bind (C, name="amgcl_schur_pc_create")
+            use iso_c_binding
+            integer (c_int),    intent(in), value :: n
+            integer (c_int),    intent(in)        :: ptr(*)
+            integer (c_int),    intent(in)        :: col(*)
+            real    (c_double), intent(in)        :: val(*)
+            integer (c_int),    intent(in), value :: pressure_vars
+            integer (c_int),    intent(in), value :: devnum
+            integer (c_size_t), intent(in), value :: prm
+        end function
+
+        ! Solve the problem for the given right-hand side.
+        type(conv_info) &
+        function amgcl_schur_pc_solve(solver, rhs, x) bind (C, name="amgcl_schur_pc_solve")
+            use iso_c_binding
+            integer (c_size_t), intent(in), value :: solver
+            real    (c_double), intent(in)        :: rhs(*)
+            real    (c_double), intent(inout)     :: x(*)
+
+            type, bind(C) :: conv_info
+                integer (c_int)    :: iterations;
+                real    (c_double) :: residual
+            end type
+        end function
+
+        ! Printout solver structure
+        subroutine amgcl_schur_pc_report(solver) bind(C, name="amgcl_schur_pc_report")
+            use iso_c_binding
+            integer (c_size_t), intent(in), value :: solver
+        end subroutine
+
+        ! Destroy iterative solver.
+        subroutine amgcl_schur_pc_destroy(solver) bind(C, name="amgcl_schur_pc_destroy")
             use iso_c_binding
             integer (c_size_t), intent(in), value :: solver
         end subroutine

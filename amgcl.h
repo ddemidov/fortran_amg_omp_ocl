@@ -55,6 +55,12 @@ void STDCALL amgcl_params_read_json(amgclHandle prm, const char *fname);
 // Destroy parameter list.
 void STDCALL amgcl_params_destroy(amgclHandle prm);
 
+// Convergence info
+struct conv_info {
+    int    iterations;
+    double residual;
+};
+
 // Create iterative solver preconditioned by AMG.
 // ptr and col arrays are 1-based (as in Fortran).
 //
@@ -70,12 +76,6 @@ amgclHandle STDCALL amgcl_solver_create(
         amgclHandle   parameters
         );
 
-// Convergence info
-struct conv_info {
-    int    iterations;
-    double residual;
-};
-
 // Solve the problem for the given right-hand side.
 conv_info STDCALL amgcl_solver_solve(
         amgclHandle    solver,
@@ -88,6 +88,27 @@ void STDCALL amgcl_solver_report(amgclHandle solver);
 
 // Destroy iterative solver.
 void STDCALL amgcl_solver_destroy(amgclHandle solver);
+
+
+amgclHandle STDCALL amgcl_schur_pc_create(
+        int           n,
+        const int    *ptr,
+        const int    *col,
+        const double *val,
+        int           pressure_vars,
+        int           devnum,
+        amgclHandle   parameters
+        );
+
+void STDCALL amgcl_schur_pc_report(amgclHandle solver);
+
+conv_info STDCALL amgcl_schur_pc_solve(
+        amgclHandle    solver,
+        double const * rhs,
+        double       * x
+        );
+
+void STDCALL amgcl_schur_pc_destroy(amgclHandle solver);
 
 #ifdef __cplusplus
 } // extern "C"

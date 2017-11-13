@@ -68,7 +68,7 @@ program poisson
     params = amgcl_params_create()
     call amgcl_params_sets(params, "solver.type", "bicgstab")
     call amgcl_params_setf(params, "solver.tol", 1e-6)
-    call amgcl_params_sets(params, "precond.relax.type", "ilu0")
+    call amgcl_params_sets(params, "precond.relax.type", "spai0")
 
     ! Read parameters from a JSON file.
     ! An example of JSON file with the above parameters:
@@ -79,7 +79,7 @@ program poisson
     !   },
     !   "precond" : {
     !     "relax" : {
-    !       "type" : "ilu0"
+    !       "type" : "spai0"
     !     }
     !   }
     ! }

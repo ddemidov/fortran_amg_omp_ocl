@@ -10,3 +10,7 @@ EXPORTS
     amgcl_solver_solve
     amgcl_solver_destroy
     amgcl_solver_report
+    amgcl_schur_pc_create
+    amgcl_schur_pc_solve
+    amgcl_schur_pc_destroy
+    amgcl_schur_pc_report

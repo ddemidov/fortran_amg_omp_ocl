@@ -34,6 +34,7 @@ THE SOFTWARE.
 #include <amgcl/backend/vexcl.hpp>
 #include <amgcl/runtime.hpp>
 #include <amgcl/preconditioner/runtime.hpp>
+#include <amgcl/preconditioner/schur_pressure_correction.hpp>
 #include <amgcl/make_solver.hpp>
 #include <amgcl/adapter/crs_tuple.hpp>
 
@@ -107,21 +108,47 @@ vex::Context& ctx(int devnum = 0) {
 typedef amgcl::backend::builtin<double> openmp;
 typedef amgcl::backend::vexcl<double>   opencl;
 
-typedef
+template <class Backend>
+using amg_solver =
     amgcl::make_solver<
-        amgcl::runtime::preconditioner<openmp>,
-        amgcl::runtime::iterative_solver<openmp>
-        >
-    openmp_solver;
+        amgcl::runtime::preconditioner<Backend>,
+        amgcl::runtime::iterative_solver<Backend>
+        >;
 
-typedef
-    amgcl::make_solver<
-        amgcl::runtime::preconditioner<opencl>,
-        amgcl::runtime::iterative_solver<opencl>
-        >
-    opencl_solver;
+template <class Backend>
+struct solver_type;
 
-typedef boost::variant<openmp_solver*, opencl_solver*> solver;
+template <> struct solver_type<openmp> : amg_solver<openmp>
+{
+    typedef amg_solver<openmp> Base;
+    using Base::Base;
+};
+    
+template <> struct solver_type<opencl> : amg_solver<opencl>
+{
+    typedef amg_solver<opencl> Base;
+    typedef Base::params params;
+    typedef opencl::params backend_params;
+
+    mutable vex::vector<double> X, F;
+
+    template <class Matrix>
+    solver_type(
+            const Matrix &A,
+            const params &prm = params(),
+            const backend_params &bprm = backend_params()
+            )
+        : Base(A, prm, bprm),
+          X(bprm.q, amgcl::backend::rows(A)),
+          F(bprm.q, amgcl::backend::rows(A))
+    {}
+};
+    
+
+typedef boost::variant<
+    solver_type<openmp>*,
+    solver_type<opencl>*
+    > solver;
 
 //---------------------------------------------------------------------------
 amgclHandle STDCALL amgcl_solver_create(
@@ -149,14 +176,14 @@ amgclHandle STDCALL amgcl_solver_create(
     if (prm) p = *static_cast<Params*>(prm);
 
     if (device < 0) {
-        return static_cast<amgclHandle>(new solver(new openmp_solver(A, p)));
+        return static_cast<amgclHandle>(new solver(new solver_type<openmp>(A, p)));
     } else {
         amgcl::precondition(opencl_available(), "OpenCL.dll not found!");
 
         opencl::params bp;
         bp.q = ctx(device);
 
-        return static_cast<amgclHandle>(new solver(new opencl_solver(A, p, bp)));
+        return static_cast<amgclHandle>(new solver(new solver_type<opencl>(A, p, bp)));
     }
 }
 
@@ -197,7 +224,8 @@ struct solver_solve : boost::static_visitor<> {
 
     solver_solve(const double *rhs, double *x) : rhs(rhs), x(x) {}
 
-    void operator()(const openmp_solver *s) const {
+    template <template <class> class S>
+    void operator()(const S<openmp> *s) const {
         size_t n = s->size();
 
         auto X = boost::make_iterator_range(x, x + n);
@@ -206,15 +234,16 @@ struct solver_solve : boost::static_visitor<> {
         boost::tie(conv.iterations, conv.residual) = (*s)(F, X);
     }
 
-    void operator()(const opencl_solver *s) const {
+    template <template <class> class S>
+    void operator()(const S<opencl> *s) const {
         size_t n = s->size();
 
-        vex::vector<double> X(ctx(), n, x);
-        vex::vector<double> F(ctx(), n, rhs);
+        vex::copy(x, x + n, s->X.begin());
+        vex::copy(rhs, rhs + n, s->F.begin());
 
-        boost::tie(conv.iterations, conv.residual) = (*s)(F, X);
+        boost::tie(conv.iterations, conv.residual) = (*s)(s->F, s->X);
 
-        vex::copy(X.begin(), X.end(), x);
+        vex::copy(s->X.begin(), s->X.end(), x);
     }
 };
 
@@ -229,4 +258,124 @@ conv_info STDCALL amgcl_solver_solve(
     solver_solve solve(rhs, x);
     boost::apply_visitor(solve, *s);
     return solve.conv;
+}
+
+//---------------------------------------------------------------------------
+template <class Backend>
+using schur_solver =
+    amgcl::make_solver<
+        amgcl::preconditioner::schur_pressure_correction<
+            amgcl::make_solver<
+                amgcl::runtime::relaxation::as_preconditioner<Backend>,
+                amgcl::runtime::iterative_solver<Backend>
+            >,
+            amgcl::make_solver<
+                amgcl::runtime::amg<Backend>,
+                amgcl::runtime::iterative_solver<Backend>
+            >
+        >,
+        amgcl::runtime::iterative_solver<Backend>
+    >;
+
+template <class Backend>
+struct spc_solver_type;
+
+template <> struct spc_solver_type<openmp> : schur_solver<openmp>
+{
+    typedef schur_solver<openmp> Base;
+    using Base::Base;
+};
+    
+template <> struct spc_solver_type<opencl> : schur_solver<opencl>
+{
+    typedef schur_solver<opencl> Base;
+    typedef Base::params params;
+    typedef opencl::params backend_params;
+
+    mutable vex::vector<double> X, F;
+
+    template <class Matrix>
+    spc_solver_type(
+            const Matrix &A,
+            const params &prm = params(),
+            const backend_params &bprm = backend_params()
+            )
+        : Base(A, prm, bprm),
+          X(bprm.q, amgcl::backend::rows(A)),
+          F(bprm.q, amgcl::backend::rows(A))
+    {}
+};
+typedef boost::variant<
+    spc_solver_type<openmp>*,
+    spc_solver_type<opencl>*
+    > spc_solver;
+
+//---------------------------------------------------------------------------
+amgclHandle STDCALL amgcl_schur_pc_create(
+        int           n,
+        const int    *ptr,
+        const int    *col,
+        const double *val,
+        int           pvars,
+        int           device,
+        amgclHandle   prm
+        )
+{
+    const int nnz = ptr[n] - 1;
+
+    auto ptr_rng = boost::make_iterator_range(ptr, ptr + n+1);
+    auto col_rng = boost::make_iterator_range(col, col + nnz);
+    auto val_rng = boost::make_iterator_range(val, val + nnz);
+
+    auto A = boost::make_tuple(n,
+            ptr_rng | boost::adaptors::transformed([](int i){ return i - 1; }),
+            col_rng | boost::adaptors::transformed([](int i){ return i - 1; }),
+            val_rng
+            );
+
+    Params p;
+    if (prm) p = *static_cast<Params*>(prm);
+
+    std::vector<char> pmask(n, 1);
+    for(int i = pvars; i < n; ++i) pmask[i] = 0;
+
+    p.put("precond.pmask", static_cast<void*>(pmask.data()));
+    p.put("precond.pmask_size", n);
+
+    if (device < 0) {
+        return static_cast<amgclHandle>(new spc_solver(new spc_solver_type<openmp>(A, p)));
+    } else {
+        amgcl::precondition(opencl_available(), "OpenCL.dll not found!");
+
+        opencl::params bp;
+        bp.q = ctx(device);
+
+        return static_cast<amgclHandle>(new spc_solver(new spc_solver_type<opencl>(A, p, bp)));
+    }
+}
+
+//---------------------------------------------------------------------------
+void STDCALL amgcl_schur_pc_report(amgclHandle handle) {
+    const spc_solver *s = static_cast<const spc_solver*>(handle);
+    boost::apply_visitor(solver_report(), *s);
+}
+
+//---------------------------------------------------------------------------
+conv_info STDCALL amgcl_schur_pc_solve(
+        amgclHandle    handle,
+        double const * rhs,
+        double       * x
+        )
+{
+    const spc_solver *s = static_cast<const spc_solver*>(handle);
+    solver_solve solve(rhs, x);
+    boost::apply_visitor(solve, *s);
+    return solve.conv;
+}
+
+//---------------------------------------------------------------------------
+void STDCALL amgcl_schur_pc_destroy(amgclHandle handle) {
+    const spc_solver *s = static_cast<const spc_solver*>(handle);
+    boost::apply_visitor(solver_destroy(), *s);
+    delete s;
 }
