@@ -38,6 +38,7 @@ THE SOFTWARE.
 #include <amgcl/preconditioner/schur_pressure_correction.hpp>
 #include <amgcl/make_solver.hpp>
 #include <amgcl/adapter/crs_tuple.hpp>
+#include <amgcl/io/mm.hpp>
 
 #include "amgcl.h"
 
@@ -178,6 +179,20 @@ amgclHandle STDCALL amgcl_solver_create(
 
     if (boost::filesystem::exists("libamgcl.json")) {
         read_json("libamgcl.json", p);
+    }
+
+    if (boost::filesystem::exists("libamgcl-debug.json")) {
+        Params dbg;
+        read_json("libamgcl-debug.json", dbg);
+
+        std::string matrix = "A.mtx", params = "p.json";
+        dbg.get("matrix", matrix);
+        dbg.get("params", params);
+
+        amgcl::io::mm_write(matrix, A);
+
+        std::ofstream pfile(params);
+        write_json(pfile, p);
     }
 
     if (device < 0) {
@@ -343,6 +358,20 @@ amgclHandle STDCALL amgcl_schur_pc_create(
 
     if (boost::filesystem::exists("libamgcl.json")) {
         read_json("libamgcl.json", p);
+    }
+
+    if (boost::filesystem::exists("libamgcl-debug.json")) {
+        Params dbg;
+        read_json("libamgcl-debug.json", dbg);
+
+        std::string matrix = "A.mtx", params = "p.json";
+        dbg.get("matrix", matrix);
+        dbg.get("params", params);
+
+        amgcl::io::mm_write(matrix, A);
+
+        std::ofstream pfile(params);
+        write_json(pfile, p);
     }
 
     p.put("precond.pmask_size", n);
