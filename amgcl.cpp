@@ -29,6 +29,7 @@ THE SOFTWARE.
 #include <boost/variant.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/filesystem.hpp>
 
 #include <amgcl/backend/builtin.hpp>
 #include <amgcl/backend/vexcl.hpp>
@@ -174,6 +175,10 @@ amgclHandle STDCALL amgcl_solver_create(
 
     Params p;
     if (prm) p = *static_cast<Params*>(prm);
+
+    if (boost::filesystem::exists("libamgcl.json")) {
+        read_json("libamgcl.json", p);
+    }
 
     if (device < 0) {
         return static_cast<amgclHandle>(new solver(new solver_type<openmp>(A, p)));
@@ -336,11 +341,12 @@ amgclHandle STDCALL amgcl_schur_pc_create(
     Params p;
     if (prm) p = *static_cast<Params*>(prm);
 
-    std::vector<char> pmask(n, 1);
-    for(int i = pvars; i < n; ++i) pmask[i] = 0;
+    if (boost::filesystem::exists("libamgcl.json")) {
+        read_json("libamgcl.json", p);
+    }
 
-    p.put("precond.pmask", static_cast<void*>(pmask.data()));
     p.put("precond.pmask_size", n);
+    p.put("precond.pmask_pattern", std::string("<") + std::to_string(pvars));
 
     if (device < 0) {
         return static_cast<amgclHandle>(new spc_solver(new spc_solver_type<openmp>(A, p)));
