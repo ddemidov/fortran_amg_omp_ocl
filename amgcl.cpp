@@ -216,6 +216,11 @@ amgclHandle STDCALL amgcl_solver_create(
     }
 
 #ifdef AMGCL_DEBUG
+    if (boost::filesystem::exists("libamgcl-device.txt")) {
+        std::ifstream f("libamgcl-device.txt");
+        f >> device;
+    }
+
     if (boost::filesystem::exists("libamgcl-debug.json")) {
         Params dbg;
         read_json("libamgcl-debug.json", dbg);
@@ -400,6 +405,11 @@ amgclHandle STDCALL amgcl_schur_pc_create(
     p.put("precond.pmask_pattern", std::string("<") + std::to_string(pvars));
 
 #ifdef AMGCL_DEBUG
+    if (boost::filesystem::exists("libamgcl-device.txt")) {
+        std::ifstream f("libamgcl-device.txt");
+        f >> device;
+    }
+
     if (boost::filesystem::exists("libamgcl-debug.json")) {
         Params dbg;
         read_json("libamgcl-debug.json", dbg);
