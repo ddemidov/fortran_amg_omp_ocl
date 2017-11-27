@@ -1,17 +1,20 @@
-#ifndef DEVNUM
-#  define DEVNUM -1
-#endif
-
 program poisson
     use, intrinsic :: iso_c_binding
     use amgcl
     implicit none
 
-    integer :: n, n2, idx, nnz, i, j
+    integer :: n, n2, idx, nnz, i, j, devnum
     integer(c_int), allocatable :: ptr(:), col(:)
     real(c_double), allocatable :: val(:), rhs(:), x(:)
     integer(c_size_t) :: solver, params
     type(conv_info) :: cnv
+
+    ! Device to use:
+    devnum = -1
+    if (iargc() > 0) then
+        call getarg(1, arg)
+        read(arg, "(i4)") devnum
+    endif
 
     ! Assemble matrix in CRS format for a Poisson problem in n x n square.
     n  = 256
@@ -86,7 +89,7 @@ program poisson
     call amgcl_params_read_json(params, "params.json");
 
     ! Create solver, printout its structure.
-    solver = amgcl_solver_create(n2, ptr, col, val, DEVNUM, params)
+    solver = amgcl_solver_create(n2, ptr, col, val, devnum, params)
     call amgcl_solver_report(solver)
 
     ! Solve the problem for the given right-hand-side.

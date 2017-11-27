@@ -17,12 +17,7 @@ if (WIN32)
 else()
     enable_language(Fortran)
 
-    add_executable(poisson_omp poisson.F90 amgcl.F90)
-    target_compile_definitions(poisson_omp PRIVATE DEVNUM=-1)
-    target_link_libraries(poisson_omp libamgcl)
-
-    add_executable(poisson_ocl poisson.F90 amgcl.F90)
-    target_compile_definitions(poisson_ocl PRIVATE DEVNUM=0)
-    target_link_libraries(poisson_ocl libamgcl)
+    add_executable(poisson poisson.F90 amgcl.F90)
+    target_link_libraries(poisson libamgcl)
 endif()
 
