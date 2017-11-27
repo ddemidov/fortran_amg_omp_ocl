@@ -41,6 +41,10 @@ THE SOFTWARE.
 #include <amgcl/adapter/crs_tuple.hpp>
 #include <amgcl/profiler.hpp>
 
+#ifdef AMGCL_DEBUG
+#  include <amgcl/io/mm.hpp>
+#endif
+
 #include "amgcl.h"
 
 #ifdef WIN32
@@ -211,6 +215,22 @@ amgclHandle STDCALL amgcl_solver_create(
         read_json("libamgcl.json", p);
     }
 
+#ifdef AMGCL_DEBUG
+    if (boost::filesystem::exists("libamgcl-debug.json")) {
+        Params dbg;
+        read_json("libamgcl-debug.json", dbg);
+
+        std::string matrix = "A.mtx", params = "p.json";
+        dbg.get("matrix", matrix);
+        dbg.get("params", params);
+
+        amgcl::io::mm_write(matrix, A);
+
+        std::ofstream pfile(params);
+        write_json(pfile, p);
+    }
+#endif
+
     if (device < 0) {
         return static_cast<amgclHandle>(new solver(new solver_type<openmp>(A, p)));
     } else {
@@ -378,6 +398,22 @@ amgclHandle STDCALL amgcl_schur_pc_create(
 
     p.put("precond.pmask_size", n);
     p.put("precond.pmask_pattern", std::string("<") + std::to_string(pvars));
+
+#ifdef AMGCL_DEBUG
+    if (boost::filesystem::exists("libamgcl-debug.json")) {
+        Params dbg;
+        read_json("libamgcl-debug.json", dbg);
+
+        std::string matrix = "A.mtx", params = "p.json";
+        dbg.get("matrix", matrix);
+        dbg.get("params", params);
+
+        amgcl::io::mm_write(matrix, A);
+
+        std::ofstream pfile(params);
+        write_json(pfile, p);
+    }
+#endif
 
     if (device < 0) {
         return static_cast<amgclHandle>(new spc_solver(new spc_solver_type<openmp>(A, p)));

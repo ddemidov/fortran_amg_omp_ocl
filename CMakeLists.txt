@@ -12,6 +12,11 @@ target_compile_definitions(libamgcl PRIVATE VEXCL_THROW_ON_EMPTY_CONTEXT)
 target_link_libraries(libamgcl PRIVATE amgcl::amgcl VexCL::OpenCL)
 set_target_properties(libamgcl PROPERTIES PREFIX "")
 
+option(AMGCL_DEBUG "Include debug functionality" OFF)
+if (AMGCL_DEBUG)
+    target_compile_definitions(libamgcl PRIVATE AMGCL_DEBUG)
+endif()
+
 if (WIN32)
     set_target_properties(libamgcl PROPERTIES LINK_FLAGS "/DELAYLOAD:OpenCL.dll")
 else()
