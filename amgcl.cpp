@@ -25,6 +25,7 @@ THE SOFTWARE.
 #include <iostream>
 #include <functional>
 
+#include <boost/core/ignore_unused.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/variant.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -38,6 +39,7 @@ THE SOFTWARE.
 #include <amgcl/preconditioner/schur_pressure_correction.hpp>
 #include <amgcl/make_solver.hpp>
 #include <amgcl/adapter/crs_tuple.hpp>
+#include <amgcl/profiler.hpp>
 
 #include "amgcl.h"
 
@@ -48,6 +50,31 @@ THE SOFTWARE.
 
 //---------------------------------------------------------------------------
 typedef boost::property_tree::ptree Params;
+
+//---------------------------------------------------------------------------
+amgclHandle STDCALL amgcl_profile_create() {
+    return static_cast<amgclHandle>( new amgcl::profiler<>() );
+}
+
+//---------------------------------------------------------------------------
+void STDCALL amgcl_profile_tic(amgclHandle p, const char *name) {
+    static_cast<amgcl::profiler<>*>(p)->tic(name);
+}
+
+//---------------------------------------------------------------------------
+void STDCALL amgcl_profile_toc(amgclHandle p, const char *name) {
+    static_cast<amgcl::profiler<>*>(p)->toc(name);
+}
+
+//---------------------------------------------------------------------------
+void STDCALL amgcl_profile_report(amgclHandle p) {
+    std::cout << *static_cast<amgcl::profiler<>*>(p) << std::endl;
+}
+
+//---------------------------------------------------------------------------
+void STDCALL amgcl_profile_destroy(amgclHandle p) {
+    delete static_cast<amgcl::profiler<>*>(p);
+}
 
 //---------------------------------------------------------------------------
 amgclHandle STDCALL amgcl_params_create() {
@@ -102,7 +129,10 @@ bool opencl_available() {
 //---------------------------------------------------------------------------
 vex::Context& ctx(int devnum = 0) {
     static vex::Context c(vex::Filter::DoublePrecision && vex::Filter::Position(devnum));
+
     static bool once = [](){ std::cout << c << std::endl; return true; }();
+    boost::ignore_unused(once);
+
     return c;
 }
 

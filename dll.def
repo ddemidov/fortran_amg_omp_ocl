@@ -1,5 +1,9 @@
 LIBRARY libamgcl
 EXPORTS
+    amgcl_profile_create
+    amgcl_profile_tic
+    amgcl_profile_toc
+    amgcl_profile_destroy
     amgcl_params_create
     amgcl_params_seti
     amgcl_params_setf

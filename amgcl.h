@@ -37,6 +37,21 @@ extern "C" {
 
 typedef void* amgclHandle;
 
+// Create profiler.
+amgclHandle STDCALL amgcl_profile_create();
+
+// Start measurement.
+void STDCALL amgcl_profile_tic(amgclHandle p, const char *name);
+
+// Stop measurement.
+void STDCALL amgcl_profile_toc(amgclHandle p, const char *name);
+
+// Show profiler report.
+void STDCALL amgcl_profile_report(amgclHandle p);
+
+// Destroy profiler.
+void STDCALL amgcl_profile_destroy(amgclHandle p);
+
 // Create parameter list.
 amgclHandle STDCALL amgcl_params_create();
 

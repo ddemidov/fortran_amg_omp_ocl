@@ -24,6 +24,8 @@ module amgcl
     use iso_c_binding
     private
     public c_size_t, c_int, c_double, c_char, conv_info, &
+        amgcl_profile_create, amgcl_profile_destroy, &
+        amgcl_profile_tic, amgcl_profile_toc, amgcl_profile_report, &
         amgcl_params_create, amgcl_params_destroy, &
         amgcl_params_seti, amgcl_params_setf, amgcl_params_sets, amgcl_params_read_json, &
         amgcl_solver_create, amgcl_solver_solve, amgcl_solver_report, amgcl_solver_destroy, &
@@ -35,6 +37,38 @@ module amgcl
     end type
 
     interface
+        ! Create profiler.
+        integer(c_size_t) &
+        function amgcl_profile_create() bind (C, name="amgcl_profile_create")
+            use iso_c_binding
+        end function
+
+        ! Start measurement.
+        subroutine amgcl_profile_tic_c(prof, name) bind (C, name="amgcl_profile_tic")
+            use iso_c_binding
+            integer   (c_size_t), intent(in), value :: prof
+            character (c_char),   intent(in)        :: name(*)
+        end subroutine
+
+        ! Stop measurement.
+        subroutine amgcl_profile_toc_c(prof, name) bind (C, name="amgcl_profile_toc")
+            use iso_c_binding
+            integer   (c_size_t), intent(in), value :: prof
+            character (c_char),   intent(in)        :: name(*)
+        end subroutine
+
+        ! Show profiler report.
+        subroutine amgcl_profile_report(prof) bind (C, name="amgcl_profile_report")
+            use iso_c_binding
+            integer   (c_size_t), intent(in), value :: prof
+        end subroutine
+
+        ! Destroy profiler.
+        subroutine amgcl_profile_destroy(prof) bind (C, name="amgcl_profile_destroy")
+            use iso_c_binding
+            integer   (c_size_t), intent(in), value :: prof
+        end subroutine
+
         ! Create parameter list.
         integer(c_size_t) &
         function amgcl_params_create() bind (C, name="amgcl_params_create")
@@ -164,43 +198,61 @@ module amgcl
 
     contains
 
-    ! Set integer parameter in a parameter list.
-    subroutine amgcl_params_seti(prm, name, val)
-        use iso_c_binding
-        integer   (c_size_t), intent(in), value :: prm
-        character (len=*),    intent(in)        :: name
-        integer   (c_int),    intent(in), value :: val
+        ! Start measurement.
+        subroutine amgcl_profile_tic(prof, name)
+            use iso_c_binding
+            integer   (c_size_t), intent(in), value :: prof
+            character (len=*),    intent(in)        :: name
 
-        call amgcl_params_seti_c(prm, name // c_null_char, val)
-    end subroutine
+            call amgcl_profile_tic_c(prof, name // c_null_char)
+        end subroutine
 
-    ! Set floating point parameter in a parameter list.
-    subroutine amgcl_params_setf(prm, name, val)
-        use iso_c_binding
-        integer   (c_size_t), intent(in), value :: prm
-        character (len=*),    intent(in)        :: name
-        real      (c_float),  intent(in), value :: val
+        ! Stop measurement.
+        subroutine amgcl_profile_toc(prof, name)
+            use iso_c_binding
+            integer   (c_size_t), intent(in), value :: prof
+            character (len=*),    intent(in)        :: name
 
-        call amgcl_params_setf_c(prm, name // c_null_char, val)
-    end subroutine
+            call amgcl_profile_toc_c(prof, name // c_null_char)
+        end subroutine
 
-    ! Set string parameter in a parameter list.
-    subroutine amgcl_params_sets(prm, name, val)
-        use iso_c_binding
-        integer   (c_size_t), intent(in), value :: prm
-        character (len=*),    intent(in)        :: name
-        character (len=*),    intent(in)        :: val
+        ! Set integer parameter in a parameter list.
+        subroutine amgcl_params_seti(prm, name, val)
+            use iso_c_binding
+            integer   (c_size_t), intent(in), value :: prm
+            character (len=*),    intent(in)        :: name
+            integer   (c_int),    intent(in), value :: val
 
-        call amgcl_params_sets_c(prm, name // c_null_char, val // c_null_char)
-    end subroutine
+            call amgcl_params_seti_c(prm, name // c_null_char, val)
+        end subroutine
 
-    ! Read parameters from a JSON file.
-    subroutine amgcl_params_read_json(prm, fname)
-        use iso_c_binding
-        integer   (c_size_t), intent(in), value :: prm
-        character (len=*),    intent(in)        :: fname
+        ! Set floating point parameter in a parameter list.
+        subroutine amgcl_params_setf(prm, name, val)
+            use iso_c_binding
+            integer   (c_size_t), intent(in), value :: prm
+            character (len=*),    intent(in)        :: name
+            real      (c_float),  intent(in), value :: val
 
-        call amgcl_params_read_json_c(prm, fname // c_null_char)
-    end subroutine
+            call amgcl_params_setf_c(prm, name // c_null_char, val)
+        end subroutine
 
-end module
+        ! Set string parameter in a parameter list.
+        subroutine amgcl_params_sets(prm, name, val)
+            use iso_c_binding
+            integer   (c_size_t), intent(in), value :: prm
+            character (len=*),    intent(in)        :: name
+            character (len=*),    intent(in)        :: val
+
+            call amgcl_params_sets_c(prm, name // c_null_char, val // c_null_char)
+        end subroutine
+
+        ! Read parameters from a JSON file.
+        subroutine amgcl_params_read_json(prm, fname)
+            use iso_c_binding
+            integer   (c_size_t), intent(in), value :: prm
+            character (len=*),    intent(in)        :: fname
+
+            call amgcl_params_read_json_c(prm, fname // c_null_char)
+        end subroutine
+
+    end module
