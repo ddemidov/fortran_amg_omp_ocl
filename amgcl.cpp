@@ -102,6 +102,7 @@ bool opencl_available() {
 //---------------------------------------------------------------------------
 vex::Context& ctx(int devnum = 0) {
     static vex::Context c(vex::Filter::DoublePrecision && vex::Filter::Position(devnum));
+    static bool once = [](){ std::cout << c << std::endl; return true; }();
     return c;
 }
 
