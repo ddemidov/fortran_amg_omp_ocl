@@ -34,7 +34,9 @@ THE SOFTWARE.
 
 #include <amgcl/backend/builtin.hpp>
 #include <amgcl/backend/vexcl.hpp>
-#include <amgcl/runtime.hpp>
+#include <amgcl/coarsening/runtime.hpp>
+#include <amgcl/relaxation/runtime.hpp>
+#include <amgcl/solver/runtime.hpp>
 #include <amgcl/preconditioner/runtime.hpp>
 #include <amgcl/preconditioner/schur_pressure_correction.hpp>
 #include <amgcl/make_solver.hpp>
@@ -148,7 +150,7 @@ template <class Backend>
 using amg_solver =
     amgcl::make_solver<
         amgcl::runtime::preconditioner<Backend>,
-        amgcl::runtime::iterative_solver<Backend>
+        amgcl::runtime::solver::wrapper<Backend>
         >;
 
 template <class Backend>
@@ -202,7 +204,7 @@ amgclHandle STDCALL amgcl_solver_create(
     auto col_rng = boost::make_iterator_range(col, col + nnz);
     auto val_rng = boost::make_iterator_range(val, val + nnz);
 
-    auto A = boost::make_tuple(n,
+    auto A = std::make_tuple(n,
             ptr_rng | boost::adaptors::transformed([](int i){ return i - 1; }),
             col_rng | boost::adaptors::transformed([](int i){ return i - 1; }),
             val_rng
@@ -292,7 +294,7 @@ struct solver_solve : boost::static_visitor<> {
         auto X = boost::make_iterator_range(x, x + n);
         auto F = boost::make_iterator_range(rhs, rhs + n);
 
-        boost::tie(conv.iterations, conv.residual) = (*s)(F, X);
+        std::tie(conv.iterations, conv.residual) = (*s)(F, X);
     }
 
     template <template <class> class S>
@@ -302,7 +304,7 @@ struct solver_solve : boost::static_visitor<> {
         vex::copy(x, x + n, s->X.begin());
         vex::copy(rhs, rhs + n, s->F.begin());
 
-        boost::tie(conv.iterations, conv.residual) = (*s)(s->F, s->X);
+        std::tie(conv.iterations, conv.residual) = (*s)(s->F, s->X);
 
         vex::copy(s->X.begin(), s->X.end(), x);
     }
@@ -327,15 +329,22 @@ using schur_solver =
     amgcl::make_solver<
         amgcl::preconditioner::schur_pressure_correction<
             amgcl::make_solver<
-                amgcl::runtime::relaxation::as_preconditioner<Backend>,
-                amgcl::runtime::iterative_solver<Backend>
+                amgcl::relaxation::as_preconditioner<
+                    Backend,
+                    amgcl::runtime::relaxation::wrapper
+                    >,
+                amgcl::runtime::solver::wrapper<Backend>
             >,
             amgcl::make_solver<
-                amgcl::runtime::amg<Backend>,
-                amgcl::runtime::iterative_solver<Backend>
+                amgcl::amg<
+                    Backend,
+                    amgcl::runtime::coarsening::wrapper,
+                    amgcl::runtime::relaxation::wrapper
+                    >,
+                amgcl::runtime::solver::wrapper<Backend>
             >
         >,
-        amgcl::runtime::iterative_solver<Backend>
+        amgcl::runtime::solver::wrapper<Backend>
     >;
 
 template <class Backend>
@@ -388,7 +397,7 @@ amgclHandle STDCALL amgcl_schur_pc_create(
     auto col_rng = boost::make_iterator_range(col, col + nnz);
     auto val_rng = boost::make_iterator_range(val, val + nnz);
 
-    auto A = boost::make_tuple(n,
+    auto A = std::make_tuple(n,
             ptr_rng | boost::adaptors::transformed([](int i){ return i - 1; }),
             col_rng | boost::adaptors::transformed([](int i){ return i - 1; }),
             val_rng
